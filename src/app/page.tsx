@@ -1,7 +1,6 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"
 
@@ -309,10 +308,10 @@ export default function NumberCrossGame() {
       setGrid(newGrid)
       setInitialized(true)
     }
-  }, [initialized])
+  }, [initialized, grid, regions, highlightedCells])
 
   // Function to get adjacent cells
-  const getAdjacentCells = (row, col) => {
+  const getAdjacentCells = (row: number, col: number): number[][] => {
     return [
       [row - 1, col], // up
       [row + 1, col], // down
@@ -325,8 +324,8 @@ export default function NumberCrossGame() {
 
   // Function to validate region consistency (all cells in a region have the same digit)
   const validateRegionConsistency = (currentGrid = grid) => {
-    const regionValues = new Map();
-    const inconsistentRegions = new Set();
+    const regionValues = new Map<number, number>();
+    const inconsistentRegions = new Set<number>();
 
     // First pass: collect values for each region
     regions.forEach((region, regionIndex) => {
@@ -347,13 +346,22 @@ export default function NumberCrossGame() {
 
     return {
       isValid: inconsistentRegions.size === 0,
-      inconsistentRegions: Array.from(inconsistentRegions)
+      inconsistentRegions: Array.from(inconsistentRegions) as number[]
     };
   }
 
+  // Type definition for adjacent region violations
+  type AdjacentRegionViolation = {
+    position1: [number, number];
+    position2: [number, number];
+    region1: number;
+    region2: number;
+    value: number;
+  };
+
   // Function to validate adjacent cells in different regions have different digits
   const validateAdjacentRegions = (currentGrid = grid) => {
-    const violations = [];
+    const violations: AdjacentRegionViolation[] = [];
 
     // Check each cell and its adjacent cells
     for (let row = 0; row < GRID_SIZE; row++) {
@@ -393,33 +401,33 @@ export default function NumberCrossGame() {
   }
   
   // Helper functions for validating the row clues
-  const isSquare = (num) => {
+  const isSquare = (num: number): boolean => {
     const root = Math.sqrt(num);
     return Math.floor(root) === root;
   }
   
-  const productOfDigits = (num) => {
+  const productOfDigits = (num: number): number => {
     return num.toString().split('').reduce((product, digit) => product * parseInt(digit, 10), 1);
   }
   
-  const isMultipleOf = (num, divisor) => {
+  const isMultipleOf = (num: number, divisor: number): boolean => {
     return num % divisor === 0;
   }
   
-  const isDivisibleByEachDigit = (num) => {
+  const isDivisibleByEachDigit = (num: number): boolean => {
     const digits = num.toString().split('').map(d => parseInt(d, 10));
     return digits.every(digit => digit !== 0 && num % digit === 0);
   }
   
-  const isOddPalindrome = (num) => {
+  const isOddPalindrome = (num: number): boolean => {
     const numStr = num.toString();
     const isPalindrome = numStr === numStr.split('').reverse().join('');
     return isPalindrome && num % 2 === 1;
   }
   
-  const isFibonacci = (num) => {
+  const isFibonacci = (num: number): boolean => {
     // Function to check if a number is a perfect square
-    const isPerfectSquare = n => {
+    const isPerfectSquare = (n: number): boolean => {
       const sqrt = Math.sqrt(n);
       return sqrt === Math.floor(sqrt);
     };
@@ -428,7 +436,7 @@ export default function NumberCrossGame() {
     return isPerfectSquare(5 * num * num + 4) || isPerfectSquare(5 * num * num - 4);
   }
   
-  const isPrime = (num) => {
+  const isPrime = (num: number): boolean => {
     if (num <= 1) return false;
     if (num <= 3) return true;
     if (num % 2 === 0 || num % 3 === 0) return false;
@@ -487,7 +495,6 @@ export default function NumberCrossGame() {
       }
       
       // Validate each number against the row clue
-      let rowValid = true;
       for (const num of numbers) {
         let numValid = false;
         
@@ -527,7 +534,6 @@ export default function NumberCrossGame() {
         }
         
         if (!numValid) {
-          rowValid = false;
           rowViolations.push({
             row,
             number: num,
@@ -544,14 +550,24 @@ export default function NumberCrossGame() {
     };
   }
 
+  // Define Cell type for better type safety
+  type Cell = {
+    value: number;
+    tiled: boolean;
+    highlighted: boolean;
+    region: number;
+    originalValue: number;
+    increments: Array<{tileId: string; amount: number}>;
+  };
+
   // Function to check if a tile can be placed (no adjacent tiles)
-  const canPlaceTile = (row, col, currentGrid) => {
+  const canPlaceTile = (row: number, col: number, currentGrid: Cell[][]) => {
     const adjacentCells = getAdjacentCells(row, col)
     return !adjacentCells.some(([r, c]) => currentGrid[r][c].tiled)
   }
 
   // Function to distribute increments to adjacent cells
-  const distributeIncrements = (row, col, value, newGrid, tileId) => {
+  const distributeIncrements = (row: number, col: number, value: number, newGrid: Cell[][], tileId: string) => {
     const adjacentCells = getAdjacentCells(row, col)
 
     // Filter out highlighted cells
@@ -600,7 +616,7 @@ export default function NumberCrossGame() {
   }
 
   // Function to handle cell click
-  const handleCellClick = (row, col) => {
+  const handleCellClick = (row: number, col: number) => {
     const newGrid = JSON.parse(JSON.stringify(grid)) // Deep copy
     const cell = newGrid[row][col]
 
@@ -729,7 +745,7 @@ export default function NumberCrossGame() {
   }
 
   // Function to check if a cell has a border on a specific side
-  const hasBorder = (row, col, side) => {
+  const hasBorder = (row: number, col: number, side: string): boolean => {
     if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) return true
 
     const currentRegion = grid[row][col].region
